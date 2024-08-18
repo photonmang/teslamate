@@ -19,12 +19,21 @@ install_dependencies() {
         sudo pacman -Sy
         sudo pacman -S --noconfirm docker docker-compose
     elif [ -f "/etc/openwrt_release" ]; then
-        echo "检测到 OpenWrt 系统 - 使用 opkg 安装 Docker 和 Docker Compose..."
+        echo "OpenWrt 系统检测到 - 使用 opkg 安装 Docker 和 Docker Compose..."
         opkg update
         opkg install docker-compose
     else
         echo "未找到支持的包管理器。请手动安装 Docker 和 Docker Compose。"
         exit 1
+    fi
+}
+
+# 启动 Docker 守护进程
+start_docker() {
+    if ! pgrep -x "dockerd" > /dev/null; then
+        echo "Docker 守护进程未运行，正在启动..."
+        sudo dockerd &
+        sleep 5  # 等待 Docker 启动
     fi
 }
 
@@ -60,18 +69,26 @@ case $OPTION in
         # 安装 Docker 和 Docker Compose
         install_dependencies
 
-        # 创建目录
-        if [ ! -d "/opt/teslamate" ]; then
-            mkdir /opt/teslamate
-        else
-            rm -rf /opt/teslamate
-            mkdir /opt/teslamate
+        # 启动 Docker 守护进程
+        start_docker
+
+        # 确保 /opt 目录存在
+        if [ ! -d "/opt" ]; then
+            echo "创建 /opt 目录..."
+            sudo mkdir /opt
         fi
+
+        # 创建 TeslaMate 目录
+        if [ ! -d "/opt/teslamate" ]; then
+            echo "创建 /opt/teslamate 目录..."
+            sudo mkdir /opt/teslamate
+        fi
+
         cd /opt/teslamate
 
         # 创建 docker-compose.yml 配置文件
         cat <<EOF > docker-compose.yml
-version: "3"
+version: "3.8"  # 更新为支持的版本
 
 services:
   teslamate:
@@ -185,29 +202,16 @@ EOF
 
             # 检查备份文件大小
             BACKUP_SIZE=$(stat -c%s "$BACKUP_PATH")
-            if [ "$BACKUP_SIZE" -gt 0 ]; then
-                echo "备份测试成功！文件大小为 ${BACKUP_SIZE} 字节。"
-            else
-                echo "备份测试失败，请检查 TeslaMate 的目录路径是否正确。"
-            fi
+            echo "备份文件大小: $BACKUP_SIZE bytes"
         else
-            echo "备份脚本已创建，但未执行备份测试。"
+            echo "备份脚本已创建。请手动运行 ${TESLAMATE_DIR}/backup_teslamate.sh 进行备份。"
         fi
-
-        # 自动添加到定时任务
-        read -p "请输入定时任务时间（格式为：每天备份，请输入 '0 1 * * *'，每小时备份，请输入 '0 * * * *'，每周备份，请输入 '0 0 * * 0'）： " CRON_TIME
-        (crontab -l 2>/dev/null; echo "$CRON_TIME /bin/bash $BACKUP_DIR/backup_teslamate.sh") | crontab -
-        echo "定时任务已设置，备份时间为 $CRON_TIME。"
         ;;
 
     3)
-        echo "正在还原 TeslaMate 数据..."
-
-        # 自定义 TeslaMate 目录
-        read -p "请输入 TeslaMate 安装目录 (默认: /opt/teslamate): " TESLAMATE_DIR
-        TESLAMATE_DIR=${TESLAMATE_DIR:-/opt/teslamate}
-
-        # 自定义备份文件路径
+        echo "自动还原数据..."
+        
+        # 自定义备份目录
         read -p "请输入备份文件路径 (默认: /opt/teslamate/teslamate.bck): " BACKUP_PATH
         BACKUP_PATH=${BACKUP_PATH:-/opt/teslamate/teslamate.bck}
 
