@@ -9,7 +9,7 @@ echo "请选择一个选项："
 echo "1. 安装 TeslaMate"
 echo "2. 备份 TeslaMate"
 echo "3. 安装 TeslaMate 并创建自动备份"
-echo "4. 一键自动还原TeslaMate数据"
+echo "4. 一键自动还原数据"
 echo "5. 退出"
 
 read -p "请输入选项（1-5）: " OPTION
