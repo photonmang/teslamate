@@ -19,7 +19,7 @@ install_dependencies() {
         sudo pacman -Sy
         sudo pacman -S --noconfirm docker docker-compose
     elif [ -f "/etc/openwrt_release" ]; then
-        echo "OpenWrt 系统检测到 - 使用 opkg 安装 Docker 和 Docker Compose..."
+        echo "检测到 OpenWrt 系统 - 使用 opkg 安装 Docker 和 Docker Compose..."
         opkg update
         opkg install docker-compose
     else
