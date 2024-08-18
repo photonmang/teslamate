@@ -4,20 +4,26 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "            TESLAMATE 一键安装脚本            "
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
+# 确保以 root 用户运行脚本
+if [ "$(id -u)" -ne "0" ]; then
+    echo "请以 root 用户运行此脚本。"
+    exit 1
+fi
+
 # 检查包管理器并安装 Docker 和 Docker Compose
 install_dependencies() {
     if command -v apt-get >/dev/null; then
         echo "检测到基于 Debian/Ubuntu 的系统，使用 apt-get 安装..."
-        sudo apt-get update
-        sudo apt-get install -y docker.io docker-compose
+        apt-get update
+        apt-get install -y docker.io docker-compose
     elif command -v yum >/dev/null; then
         echo "检测到基于 RedHat/CentOS 的系统，使用 yum 安装..."
-        sudo yum update -y
-        sudo yum install -y docker docker-compose
+        yum update -y
+        yum install -y docker docker-compose
     elif command -v pacman >/dev/null; then
         echo "检测到基于 Arch Linux 的系统，使用 pacman 安装..."
-        sudo pacman -Sy
-        sudo pacman -S --noconfirm docker docker-compose
+        pacman -Sy
+        pacman -S --noconfirm docker docker-compose
     elif [ -f "/etc/openwrt_release" ]; then
         echo "OpenWrt 系统检测到 - 使用 opkg 安装 Docker 和 Docker Compose..."
         opkg update
@@ -32,7 +38,7 @@ install_dependencies() {
 start_docker() {
     if ! pgrep -x "dockerd" > /dev/null; then
         echo "Docker 守护进程未运行，正在启动..."
-        sudo dockerd &
+        dockerd &
         sleep 5  # 等待 Docker 启动
     fi
 }
@@ -75,13 +81,13 @@ case $OPTION in
         # 确保 /opt 目录存在
         if [ ! -d "/opt" ]; then
             echo "创建 /opt 目录..."
-            sudo mkdir /opt
+            mkdir /opt
         fi
 
         # 创建 TeslaMate 目录
         if [ ! -d "/opt/teslamate" ]; then
             echo "创建 /opt/teslamate 目录..."
-            sudo mkdir /opt/teslamate
+            mkdir /opt/teslamate
         fi
 
         cd /opt/teslamate
@@ -210,10 +216,13 @@ EOF
 
     3)
         echo "自动还原数据..."
-        
+
         # 自定义备份目录
         read -p "请输入备份文件路径 (默认: /opt/teslamate/teslamate.bck): " BACKUP_PATH
         BACKUP_PATH=${BACKUP_PATH:-/opt/teslamate/teslamate.bck}
+
+        # 确保 Docker 正在运行
+        start_docker
 
         # 停止 TeslaMate 容器
         echo "停止 TeslaMate 容器..."
